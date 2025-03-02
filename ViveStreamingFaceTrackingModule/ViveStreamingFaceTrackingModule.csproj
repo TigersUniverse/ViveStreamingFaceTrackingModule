@@ -1,13 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PlatformTarget>x64</PlatformTarget>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <FileVersion>1.7.0.0</FileVersion>
     <AssemblyVersion>1.7.0.0</AssemblyVersion>
+    <LangVersion>11</LangVersion>
+    <TargetFrameworks>net7.0;netstandard2.1;net481</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,24 +19,35 @@
     <None Remove="resource\vive_logo.png" />
     <None Remove="vive_logo.png" />
   </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="lib\VRCFaceTracking.Core.dll">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="resource\VBS_XRE.png" />
-    <EmbeddedResource Include="vive_logo.png">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </EmbeddedResource>
-  </ItemGroup>
-
+  
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.0" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net481'">
     <Reference Include="VRCFaceTracking.Core">
-      <HintPath>lib\VRCFaceTracking.Core.dll</HintPath>
+      <HintPath>$(VRCFaceTrackingBuild)\net481\VRCFaceTracking.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="VRCFaceTracking.Core">
+      <HintPath>$(VRCFaceTrackingBuild)\net481\VRCFaceTracking.SDK.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net7.0'">
+    <Reference Include="VRCFaceTracking.Core">
+      <HintPath>$(VRCFaceTrackingBuild)\net7.0\VRCFaceTracking.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="VRCFaceTracking.SDK">
+      <HintPath>$(VRCFaceTrackingBuild)\net7.0\VRCFaceTracking.SDK.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
+    <Reference Include="VRCFaceTracking.Core">
+      <HintPath>$(VRCFaceTrackingBuild)\netstandard2.1\VRCFaceTracking.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="VRCFaceTracking.SDK">
+      <HintPath>$(VRCFaceTrackingBuild)\netstandard2.1\VRCFaceTracking.SDK.dll</HintPath>
     </Reference>
   </ItemGroup>
 
@@ -52,6 +64,12 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+    <None Remove="Libs\RRServerManageAPI.dll" />
+    <EmbeddedResource Include="Libs\RRServerManageAPI.dll" />
+    <None Remove="Libs\VS_PC_SDK.dll" />
+    <EmbeddedResource Include="Libs\VS_PC_SDK.dll" />
+    <None Remove="Libs\VSWPipeVarClient64U_MT.dll" />
+    <EmbeddedResource Include="Libs\VSWPipeVarClient64U_MT.dll" />
   </ItemGroup>
 
 </Project>

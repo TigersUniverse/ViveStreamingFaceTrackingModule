@@ -13,7 +13,9 @@ using System.Runtime.CompilerServices;
 using System.Runtime.ConstrainedExecution;
 using static ViveStreamingFaceTrackingModule.FaceData;
 using System.Numerics;
+using System.Reflection;
 using System.Xml.Linq;
+using Utils = VRCFaceTracking.Core.Utils;
 
 namespace ViveStreamingFaceTrackingModule
 {
@@ -123,10 +125,46 @@ namespace ViveStreamingFaceTrackingModule
         private static VS_PC_SDK.VS_StatusUpdateCallback mVSStatusUpdateCallback = OnVSStatusUpdate;
         private static VS_PC_SDK.VS_SettingChangeCallback mVSSettingChangeCallback = OnVSSettingChange;
         private static VS_PC_SDK.VS_LoggerCallback mVSLogger = OnVSWriteLog;
+        
+        // We have the ModuleLibs, but they're never saved anywhere. The directory is just kinda, assumed?
+        private string WriteAndLoadAssemblies(Assembly assembly, string persistentData)
+        {
+            string dir = Path.Combine(persistentData, "ModuleLibs");
+            if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+            foreach (string manifestResourceName in assembly.GetManifestResourceNames())
+            {
+                if(!manifestResourceName.EndsWith(".dll")) continue;
+                string[] dllNameSplit = manifestResourceName.Split('.');
+                // Yes, I know this won't work if the name contains multiple dots. I don't care.
+                string dllName = dllNameSplit[dllNameSplit.Length - 2] + ".dll";
+                string newOutput = Path.Combine(dir, dllName);
+                if(File.Exists(newOutput))
+                {
+                    LoadLibrary(newOutput);
+                    continue;
+                }
+                using Stream? nativeDll = assembly.GetManifestResourceStream(manifestResourceName);
+                if (nativeDll == null)
+                {
+                    Logger.LogWarning($"Could not get stream from Manifest {manifestResourceName}");
+                    continue;
+                }
+                using FileStream fs = new FileStream(newOutput, FileMode.Create, FileAccess.ReadWrite,
+                    FileShare.ReadWrite | FileShare.Delete);
+                nativeDll.CopyTo(fs);
+                fs.Close();
+                LoadLibrary(newOutput);
+            }
+            return dir;
+        }
 
         // Kernel32 SetDllDirectory
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
         private static extern bool SetDllDirectory(string lpPathName);
+        
+        // I should NOT have to do this
+        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern IntPtr LoadLibrary(string lpFileName);
 
         // What your interface is able to send as tracking data.
         public override (bool SupportsEye, bool SupportsExpression) Supported => (true, true);
@@ -147,14 +185,15 @@ namespace ViveStreamingFaceTrackingModule
                 stream != null ? new List<Stream> { stream } : ModuleInformation.StaticImages;
 
             // DLL directory
-            string? dllDirectory = Path.GetDirectoryName(assembly.Location);
+            /*string? dllDirectory = Path.GetDirectoryName(assembly.Location);
             if (dllDirectory == null)
             {
                 Logger.LogInformation($"Could not found DLL directory.");
                 return state;
-            }
+            }*/
             // Logger.LogInformation($"Loading VS_PC_SDK DLL from: {dllDirectory}");
-            SetDllDirectory(Path.Combine(dllDirectory, "Libs"));
+            //SetDllDirectory(Path.Combine(dllDirectory, "Libs"));
+            SetDllDirectory(WriteAndLoadAssemblies(assembly, Utils.PersistentDataDirectory));
 
             // Set callback before VS_Init() to collect init fail log
             VS_PC_SDK.VS_SetCallbackFunction(mVSStatusUpdateCallback, mVSSettingChangeCallback, mVSLogger);

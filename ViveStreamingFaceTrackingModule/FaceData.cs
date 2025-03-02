@@ -443,7 +443,11 @@ namespace ViveStreamingFaceTrackingModule
                 return false;
 
             // Some countries uses comma as float number separator. Use CultureInfo.InvariantCulture to always use dot as separator
-            if (float.TryParse(value, CultureInfo.InvariantCulture, out result) && !float.IsNaN(result))
+#if NET481 || NETSTANDARD2_1
+            if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out result))
+#else
+            if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out result))
+#endif
                 return true;
 
             return false;
